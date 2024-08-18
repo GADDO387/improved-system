@@ -35,13 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo json_encode($data);
 }
 
-// Handle POST request to store the setpoint value in the new lux_setpoints table
+// Handle POST request to store the setpoint value in the new luxvalues table
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lux = intval($_POST['lux']);
 
     if ($lux >= 0 && $lux <= 255) {
         // Insert the lux setpoint into the new table
-        $sql = "INSERT INTO lux_setpoints (setpoint) VALUES ($lux)";
+        $sql = "INSERT INTO luxvalues (setpoint) VALUES ($lux)";
 
         if ($conn->query($sql) === TRUE) {
             echo json_encode(['message' => 'Setpoint value stored successfully.']);
