@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-$servername = "172.20.10.4";
+$servername = "127.0.0.1";
 $username = "Gaddo";
 $password = "12345";
 $dbname = "sensor_data";
@@ -41,10 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($lux >= 0 && $lux <= 255) {
         // Insert the lux setpoint into the new table
-        $sql = "INSERT INTO luxvalues (setpoint) VALUES ($lux)";
+        $sql = "INSERT INTO luxvalues (setpoints) VALUES ($lux)";
 
         if ($conn->query($sql) === TRUE) {
-            echo json_encode(['message' => 'Setpoint value stored successfully.']);
+            echo json_encode(['message' => 'Setpoints value stored successfully.']);
         } else {
             echo json_encode(['message' => 'Error: ' . $conn->error]);
         }
@@ -56,3 +56,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Close the database connection
 $conn->close();
 ?>
+
