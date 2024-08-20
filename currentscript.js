@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('dataTable')) {
         fetchSensorData();
         // Set up interval to fetch sensor data every 15 seconds
-        setInterval(fetchSensorData, 15000);
+        setInterval(fetchSensorData, 45000);
     }
 
     // Light Control form submission
