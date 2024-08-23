@@ -6,24 +6,20 @@ $username = "Gaddo";
 $password = "12345";
 $dbname = "sensor_data";
 
-// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check connection
 if ($conn->connect_error) {
     die(json_encode(['error' => 'Database connection failed: ' . $conn->connect_error]));
 }
 
-// Handle GET request to fetch data
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET['action']) && $_GET['action'] === 'getWaterLevel') {
-        // Fetch the latest water level
-        $sql = "SELECT water_level FROM DHT11 ORDER BY datetime DESC LIMIT 1";
+        $sql = "SELECT waterlevel FROM DHT11 ORDER BY datetime DESC LIMIT 1";
         $result = $conn->query($sql);
 
         if ($result->num_rows > 0) {
             $row = $result->fetch_assoc();
-            echo json_encode(['water_level' => $row['water_level']]);
+            echo json_encode(['waterlevel' => $row['waterlevel']]);
         } else {
             echo json_encode(['error' => 'No water level data found']);
         }
@@ -48,12 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
-// Handle POST request to store the setpoint value in the new luxvalues table
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lux = intval($_POST['lux']);
 
     if ($lux >= 0 && $lux <= 255) {
-        // Insert the lux setpoint into the new table
         $sql = "INSERT INTO luxvalues (setpoints) VALUES ($lux)";
 
         if ($conn->query($sql) === TRUE) {
@@ -66,6 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Close the database connection
 $conn->close();
 ?>
+
