@@ -12,7 +12,7 @@ GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 
 # Serial Setup
-ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Update the port as needed
+ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Update the port as needed
 
 # Connect to MySQL database
 db = MySQLdb.connect(
