@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pump Operation</title>
     <link rel="stylesheet" href="css/styles.css">
+    <script src="js/pump_operation.js"></script> <!-- Include the JS file -->
 </head>
 <body>
     <div class="container">
@@ -18,19 +19,15 @@
                 <li><a href="pump_operation.html">Pump Operation</a></li>
             </ul>
         </nav>
-
-        <!-- Water Level Section -->
-        <div id="waterLevelContainer">
-            <h2>Water Level Status</h2>
-            <p id="waterLevel">Loading water level...</p>
-            <p id="waterLevelWarning"></p>
-        </div>
-
         <div id="pumpControls">
             <p>Interface for periodic pump operations will be displayed here.</p>
+            
+            <!-- Display the current water level -->
+            <p id="waterLevel">Current Water Level: -- cm</p>
+            
+            <!-- Display a warning message if the water level is low -->
+            <p id="waterLevelWarning"></p>
         </div>
     </div>
-
-    <script src="js/pump_operation.js"></script>
 </body>
 </html>
