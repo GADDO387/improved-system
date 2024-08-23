@@ -11,8 +11,29 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 
-# Serial Setup
-ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)  # Update the port as needed
+# Function to measure the distance using the ultrasonic sensor
+def get_distance():
+    GPIO.output(TRIG, True)
+    time.sleep(0.00001)
+    GPIO.output(TRIG, False)
+
+    pulse_start = time.time()
+    pulse_end = time.time()
+
+    while GPIO.input(ECHO) == 0:
+        pulse_start = time.time()
+
+    while GPIO.input(ECHO) == 1:
+        pulse_end = time.time()
+
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17150
+    distance = round(distance, 2)
+    return distance
+
+# Open serial port
+ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+time.sleep(2)  # Wait for the serial connection to initialize
 
 # Connect to MySQL database
 db = MySQLdb.connect(
@@ -24,57 +45,25 @@ db = MySQLdb.connect(
 
 cursor = db.cursor()
 
-def get_distance():
-    """Measure distance using ultrasonic sensor."""
-    GPIO.output(TRIG, True)
-    time.sleep(0.00001)
-    GPIO.output(TRIG, False)
-
-    pulse_start = time.time()
-    while GPIO.input(ECHO) == 0:
-        pulse_start = time.time()
-
-    pulse_end = time.time()
-    while GPIO.input(ECHO) == 1:
-        pulse_end = time.time()
-
-    pulse_duration = pulse_end - pulse_start
-    distance = pulse_duration * 17150
-    distance = round(distance, 2)
-    return distance
-
-def read_serial_data():
-    """Read sensor data from the Arduino via serial."""
-    try:
-        if ser.in_waiting > 0:
-            data = ser.readline().decode('utf-8').strip()
-            print(f"Received data: {data}")
+while True:
+    # Read sensor data from Arduino
+    if ser.in_waiting > 0:
+        try:
+            # Read lines from Arduino
+            line = ser.readline().decode('utf-8').rstrip()
+            print(f"Received line: {line}")
             
-            # Check if the data contains non-numeric strings like "Sensors Initialized."
-            if "Initialized" in data or not data.replace(',', '').replace('.', '').isdigit():
-                return None  # Ignore non-numeric or unexpected strings
-            
-            return data
-    except Exception as e:
-        print(f"Error reading from serial: {e}")
-    return None
-
-def send_lux_setpoint(setpoint):
-    """Send lux setpoint to the Arduino via serial."""
-    try:
-        ser.write(f"{setpoint}\n".encode('utf-8'))
-        print(f"Sending lux setpoint to Arduino: {setpoint}")
-    except Exception as e:
-        print(f"Error sending lux setpoint: {e}")
-
-try:
-    while True:
-        # Read sensor data from Arduino
-        sensor_data = read_serial_data()
-        if sensor_data:
-            try:
-                # Split the incoming data string into float values
-                humidity, avgTempC, luxvalue = map(float, sensor_data.split(','))
+            if "Humidity:" in line:
+                humidity = float(line.split(": ")[1])
+                
+                line = ser.readline().decode('utf-8').rstrip()
+                avgTempC = float(line.split(": ")[1])
+                
+                line = ser.readline().decode('utf-8').rstrip()
+                avgTempF = float(line.split(": ")[1])
+                
+                line = ser.readline().decode('utf-8').rstrip()
+                luxvalue = float(line.split(": ")[1])
 
                 # Get the ultrasonic sensor reading
                 water_level = get_distance()
@@ -85,27 +74,21 @@ try:
                 cursor.execute(sql, val)
                 db.commit()
 
-                print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, LuxValue={luxvalue}, Water Level={water_level} cm")
+                print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, {avgTempF}°F, LuxValue={luxvalue}, Water Level={water_level} cm")
 
-                # Send the lux setpoint to the Arduino
+                # After processing and storing the sensor data, send the lux setpoint to Arduino
                 cursor.execute("SELECT setpoints FROM luxvalues ORDER BY datetime DESC LIMIT 1")
                 result = cursor.fetchone()
                 if result:
-                    lux_setpoint = int(result[0])
-                    send_lux_setpoint(lux_setpoint)
+                    lux_setpoint = result[0]
+                    print(f"Sending lux setpoint to Arduino: {lux_setpoint}")
+                    ser.write(f"{lux_setpoint}\n".encode())
 
-            except ValueError:
-                print("Error: Received data is not in the expected format.")
+                # Sleep to avoid overwhelming the serial port
+                time.sleep(1)
+        except Exception as e:
+            print(f"Error: {e}")
 
-        # Sleep to avoid overwhelming the serial communication
-        time.sleep(1)
-
-except KeyboardInterrupt:
-    print("Terminating the program...")
-
-finally:
-    db.close()
-    GPIO.cleanup()
-    ser.close()
-    print("Resources closed successfully.")
-
+ser.close()
+db.close()
+GPIO.cleanup()
