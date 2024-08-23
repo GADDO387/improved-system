@@ -30,9 +30,11 @@ def get_distance():
     time.sleep(0.00001)
     GPIO.output(TRIG, False)
 
+    pulse_start = time.time()
     while GPIO.input(ECHO) == 0:
         pulse_start = time.time()
 
+    pulse_end = time.time()
     while GPIO.input(ECHO) == 1:
         pulse_end = time.time()
 
@@ -47,10 +49,15 @@ def read_serial_data():
         if ser.in_waiting > 0:
             data = ser.readline().decode('utf-8').strip()
             print(f"Received data: {data}")
+            
+            # Check if the data contains non-numeric strings like "Sensors Initialized."
+            if "Initialized" in data or not data.replace(',', '').replace('.', '').isdigit():
+                return None  # Ignore non-numeric or unexpected strings
+            
             return data
     except Exception as e:
         print(f"Error reading from serial: {e}")
-        return None
+    return None
 
 def send_lux_setpoint(setpoint):
     """Send lux setpoint to the Arduino via serial."""
@@ -60,38 +67,45 @@ def send_lux_setpoint(setpoint):
     except Exception as e:
         print(f"Error sending lux setpoint: {e}")
 
-while True:
-    try:
+try:
+    while True:
         # Read sensor data from Arduino
         sensor_data = read_serial_data()
         if sensor_data:
-            # Split the incoming data string into float values
-            humidity, avgTempC, luxvalue = map(float, sensor_data.split(','))
-        
-            # Get the ultrasonic sensor reading
-            water_level = get_distance()
-        
-            # Insert data into the MySQL database, including water level
-            sql = "INSERT INTO DHT11 (humidity, temperature, luxvalue, water_level) VALUES (%s, %s, %s, %s)"
-            val = (humidity, avgTempC, luxvalue, water_level)
-            cursor.execute(sql, val)
-            db.commit()
+            try:
+                # Split the incoming data string into float values
+                humidity, avgTempC, luxvalue = map(float, sensor_data.split(','))
 
-            print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, LuxValue={luxvalue}, Water Level={water_level} cm")
+                # Get the ultrasonic sensor reading
+                water_level = get_distance()
 
-            # Send the lux setpoint to the Arduino
-            cursor.execute("SELECT setpoints FROM luxvalues ORDER BY datetime DESC LIMIT 1")
-            result = cursor.fetchone()
-            if result:
-                lux_setpoint = int(result[0])
-                send_lux_setpoint(lux_setpoint)
+                # Insert data into the MySQL database, including water level
+                sql = "INSERT INTO DHT11 (humidity, temperature, luxvalue, water_level) VALUES (%s, %s, %s, %s)"
+                val = (humidity, avgTempC, luxvalue, water_level)
+                cursor.execute(sql, val)
+                db.commit()
+
+                print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, LuxValue={luxvalue}, Water Level={water_level} cm")
+
+                # Send the lux setpoint to the Arduino
+                cursor.execute("SELECT setpoints FROM luxvalues ORDER BY datetime DESC LIMIT 1")
+                result = cursor.fetchone()
+                if result:
+                    lux_setpoint = int(result[0])
+                    send_lux_setpoint(lux_setpoint)
+
+            except ValueError:
+                print("Error: Received data is not in the expected format.")
 
         # Sleep to avoid overwhelming the serial communication
         time.sleep(1)
 
-    except Exception as e:
-        print(f"Error: {e}")
+except KeyboardInterrupt:
+    print("Terminating the program...")
 
-db.close()
-GPIO.cleanup()
-ser.close()
+finally:
+    db.close()
+    GPIO.cleanup()
+    ser.close()
+    print("Resources closed successfully.")
+
