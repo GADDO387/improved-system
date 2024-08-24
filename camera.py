@@ -1,26 +1,29 @@
-import time
-from picamera2 import Picamera2
+from picamera2 import Picamera2, Preview
+from datetime import datetime
+import os
 
-# Initialize the camera
+# Directory to store images
+save_dir = "/home/pi/captured_images"
+os.makedirs(save_dir, exist_ok=True)
+
+# Initialize Picamera2
 picam2 = Picamera2()
 
-# Define the location to save the image
-image_path = "/var/www/html/images/plant_latest.jpg"
+# Configure for still image capture
+picam2.configure(picam2.create_still_configuration())
 
-def capture_image():
-    # Start the camera
-    picam2.start_preview()
+# Start the camera preview (optional, remove if not using a display)
+picam2.start_preview(Preview.QTGL)
 
-    # Give some time for the camera to adjust
-    time.sleep(2)
+# Start the camera
+picam2.start()
 
-    # Capture the image
-    picam2.capture_file(image_path)
+# Capture an image with a timestamp
+current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+image_path = os.path.join(save_dir, f"image_{current_time}.jpg")
+picam2.capture_file(image_path)
 
-    # Stop the camera
-    picam2.stop_preview()
+print(f"Image saved at {image_path}")
 
-# Capture the image every 10 minutes (adjust as needed)
-while True:
-    capture_image()
-    time.sleep(600)  # Wait for 10 minutes
+# Stop the camera
+picam2.stop()
