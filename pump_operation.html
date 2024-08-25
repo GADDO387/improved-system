@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pump Operation</title>
     <link rel="stylesheet" href="css/styles.css">
-    <script src="js/script.js"></script> <!-- Include the JS file -->
+    <script src="js/script.js"></script>
 </head>
 <body>
     <div class="container">
@@ -20,14 +20,19 @@
             </ul>
         </nav>
         <div id="pumpControls">
-            <p>Interface for periodic pump operations will be displayed here.</p>
-            
-            <!-- Display the current water level -->
+            <form id="pumpForm" method="POST" action="pump_control.php">
+                <label for="interval">Pump Interval (minutes):</label>
+                <input type="number" id="interval" name="interval" required>
+                
+                <label for="duration">Pump Duration (minutes):</label>
+                <input type="number" id="duration" name="duration" required>
+                
+                <button type="submit">Set Pump Schedule</button>
+            </form>
             <p id="waterLevel">Current Water Level: -- cm</p>
-            
-            <!-- Display a warning message if the water level is low -->
             <p id="waterLevelWarning"></p>
         </div>
     </div>
 </body>
 </html>
+
