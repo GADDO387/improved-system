@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             echo json_encode(['error' => 'No water level data found']);
         }
     } else {
-        $sql = "SELECT id, temperature, humidity, datetime FROM DHT11 ORDER BY datetime DESC LIMIT 10";
+        $sql = "SELECT id, temperature, humidity, luxvalue, datetime FROM DHT11 ORDER BY datetime DESC LIMIT 10";
         $result = $conn->query($sql);
 
         $data = array();
@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     'id' => $row['id'],
                     'temperature' => $row['temperature'],
                     'humidity' => $row['humidity'],
+                    'luxvalue' => $row['luxvalue'],
                     'datetime' => $row['datetime']
                 ];
             }
@@ -77,3 +78,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $conn->close();
 ?>
+
