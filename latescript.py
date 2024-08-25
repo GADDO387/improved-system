@@ -52,6 +52,24 @@ cursor = db.cursor()
 # Initialize variables to track the previous pump settings
 previous_pump_interval = None
 previous_pump_duration = None
+last_pump_time = None  # To track the last time the pump was operated
+
+# Function to control the pump
+def control_pump(pump_interval, pump_duration):
+    global last_pump_time
+
+    if last_pump_time is None or time.time() - last_pump_time >= pump_interval:
+        # Turn on the pump
+        GPIO.output(PUMP_PIN, GPIO.HIGH)
+        print("Pump ON")
+        time.sleep(pump_duration)  # Run the pump for the specified duration
+
+        # Turn off the pump
+        GPIO.output(PUMP_PIN, GPIO.LOW)
+        print("Pump OFF")
+
+        # Update the last pump time
+        last_pump_time = time.time()
 
 while True:
     # Read sensor data from Arduino
@@ -67,10 +85,10 @@ while True:
                 line = ser.readline().decode('utf-8').rstrip()
                 avgTempC = float(line.split(": ")[1])
                 
-                line = ser.readline().decode('utf-8').rstrip()
+                line = ser.readline().decode('utf-8").rstrip()
                 avgTempF = float(line.split(": ")[1])
                 
-                line = ser.readline().decode('utf-8').rstrip()
+                line = ser.readline().decode('utf-8").rstrip()
                 luxvalue = float(line.split(": ")[1])
 
                 # Get the ultrasonic sensor reading
@@ -82,7 +100,7 @@ while True:
                 cursor.execute(sql, val)
                 db.commit()
 
-                print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, {avgTempF}°F, LuxValue={luxvalue}, Water Level={water_level} cm")
+                print(f"Inserted into DB: Humidity={humidity}, Temperature={avgTempC}°C, LuxValue={luxvalue}, Water Level={water_level} cm")
 
                 # After processing and storing the sensor data, send the lux setpoint to Arduino
                 cursor.execute("SELECT setpoints FROM luxvalues ORDER BY datetime DESC LIMIT 1")
@@ -98,30 +116,17 @@ while True:
                 if result:
                     pump_interval = result[0]
                     pump_duration = result[1]
-                    
-                    # Check if the parameters have changed
-                    if (pump_interval != previous_pump_interval) or (pump_duration != previous_pump_duration):
-                        print(f"New pump parameters detected: Interval={pump_interval}s, Duration={pump_duration}s")
 
-                        # Turn on the pump
-                        GPIO.output(PUMP_PIN, GPIO.HIGH)
-                        print("Pump ON")
-                        time.sleep(pump_duration)  # Run the pump for the specified duration
-
-                        # Turn off the pump
-                        GPIO.output(PUMP_PIN, GPIO.LOW)
-                        print("Pump OFF")
-                        
-                        # Update the previous settings
-                        previous_pump_interval = pump_interval
-                        previous_pump_duration = pump_duration
-
-                    # Wait for the next interval before the next operation
-                    time.sleep(pump_interval - pump_duration)
+                    # Control the pump using the non-blocking timing function
+                    control_pump(pump_interval, pump_duration)
 
         except Exception as e:
             print(f"Error: {e}")
 
+    # Wait for 5 seconds before the next loop iteration
+    time.sleep(5)
+
 ser.close()
 db.close()
 GPIO.cleanup()
+
