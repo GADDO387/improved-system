@@ -2,11 +2,13 @@ import serial
 import time
 import MySQLdb
 import RPi.GPIO as GPIO
+from picamera2 import Picamera2, Preview
 
 # Setup for ultrasonic sensor
 TRIG = 23  # GPIO pin for TRIG
 ECHO = 24  # GPIO pin for ECHO
 GPIO.setwarnings(False)
+
 # Setup for the pump relay
 PUMP_PIN = 17  # GPIO pin connected to the relay controlling the pump
 GPIO.setmode(GPIO.BCM)
@@ -14,6 +16,11 @@ GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 GPIO.setup(PUMP_PIN, GPIO.OUT)
 GPIO.output(PUMP_PIN, GPIO.LOW)  # Make sure the pump is off initially
+
+# Setup for the camera
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(main={"size": (640, 480)}))
+picam2.start()
 
 # Function to measure the distance using the ultrasonic sensor
 def get_distance():
@@ -55,6 +62,10 @@ pump_duration = 600   # 10 minutes
 last_pump_time = None
 pump_running = False
 pump_end_time = None
+
+# Timer for taking pictures
+last_picture_time = time.time()
+picture_interval = 30  # 30 seconds
 
 # Function to control the pump
 def control_pump(pump_interval, pump_duration):
@@ -134,9 +145,19 @@ while True:
     if last_pump_time is not None and pump_running:
         control_pump(pump_interval, pump_duration)
 
+    # Check if it's time to take a picture
+    current_time = time.time()
+    if current_time - last_picture_time >= picture_interval:
+        # Capture an image with the camera
+        image_path = f"/var/www/html/images/sensor_data_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+        picam2.capture_file(image_path)
+        print(f"Image captured and saved to {image_path}")
+        last_picture_time = current_time
+
     # Wait for 1 second before the next loop iteration
     time.sleep(1)
 
 ser.close()
 db.close()
 GPIO.cleanup()
+
