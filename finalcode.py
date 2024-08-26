@@ -7,7 +7,6 @@ import RPi.GPIO as GPIO
 TRIG = 23  # GPIO pin for TRIG
 ECHO = 24  # GPIO pin for ECHO
 GPIO.setwarnings(False)
-
 # Setup for the pump relay
 PUMP_PIN = 17  # GPIO pin connected to the relay controlling the pump
 GPIO.setmode(GPIO.BCM)
@@ -50,14 +49,12 @@ db = MySQLdb.connect(
 
 cursor = db.cursor()
 
-# Initialize variables to track the previous pump settings
+# Default values for pump control
+pump_interval = 3600  # 1 hour
+pump_duration = 600   # 10 minutes
 last_pump_time = None
 pump_running = False
 pump_end_time = None
-
-# Set default pump control values
-pump_interval = 3600  # Default pump interval in seconds (1 hour)
-pump_duration = 600   # Default pump duration in seconds (10 minutes)
 
 # Function to control the pump
 def control_pump(pump_interval, pump_duration):
@@ -104,8 +101,8 @@ while True:
                 water_level = get_distance()
 
                 # Insert data into the MySQL database, including water level
-                sql = "INSERT INTO DHT11 (humidity, temperature, luxvalue, waterlevel) VALUES (%s, %s, %s, %s)"
-                val = (humidity, avgTempC, luxvalue, water_level)
+                sql = "INSERT INTO DHT11 (humidity, temperature, luxvalue, waterlevel, pump_interval, pump_duration) VALUES (%s, %s, %s, %s, %s, %s)"
+                val = (humidity, avgTempC, luxvalue, water_level, pump_interval, pump_duration)
                 cursor.execute(sql, val)
                 db.commit()
 
@@ -119,18 +116,16 @@ while True:
                     print(f"Sending lux setpoint to Arduino: {lux_setpoint}")
                     ser.write(f"{lux_setpoint}\n".encode())
 
-                # Fetch the latest pump control parameters if available
+                # Fetch the latest pump control parameters from the database
                 cursor.execute("SELECT pump_interval, pump_duration FROM DHT11 ORDER BY datetime DESC LIMIT 1")
                 result = cursor.fetchone()
                 if result:
-                    # Only update if non-null values are retrieved
-                    if result[0] is not None:
-                        pump_interval = result[0]
-                    if result[1] is not None:
-                        pump_duration = result[1]
+                    pump_interval = result[0]
+                    pump_duration = result[1]
+                    print(f"Using new pump settings: Interval={pump_interval}, Duration={pump_duration}")
 
-                    # Control the pump using the non-blocking timing function
-                    control_pump(pump_interval, pump_duration)
+                # Control the pump using the updated interval and duration
+                control_pump(pump_interval, pump_duration)
 
         except Exception as e:
             print(f"Error: {e}")
@@ -145,3 +140,4 @@ while True:
 ser.close()
 db.close()
 GPIO.cleanup()
+
