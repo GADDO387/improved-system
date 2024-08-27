@@ -49,8 +49,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (waterLevelElement && data.waterlevel !== undefined) {
                     waterLevelElement.textContent = `Current Water Level: ${data.waterlevel} cm`;
 
-                    const threshold = 10.0; 
-                    if (data.waterlevel < threshold) {
+                    const threshold = 100.0; 
+                    if (data.waterlevel > threshold) {
                         const warningElement = document.getElementById('waterLevelWarning');
                         warningElement.textContent = "Water level is low, refill is needed!";
                         warningElement.style.color = "red";
